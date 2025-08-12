@@ -146,7 +146,7 @@ async function editProduct(id, nom, tavsif, narx, miqdor) {
 // Sotildi belgilash
 async function markAsSold(id) {
   try {
-    const res = await fetch(`https://mahsulot-1-jerl.onrender.com/check_S/${id}`, {
+    const res = await fetch(`https://mahsulot-1-jerl.onrender.com/products/check_S/${id}`, {
       method: "PUT",
       headers: {
         "Authorization": `Bearer ${accessToken}`
