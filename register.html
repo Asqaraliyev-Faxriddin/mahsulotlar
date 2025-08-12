@@ -145,13 +145,24 @@ async function editProduct(id, nom, tavsif, narx, miqdor) {
 
 // Sotildi belgilash
 async function markAsSold(id) {
-  await fetch(`https://mahsulot-1-jerl.onrender.com/check_S/${id}`, {
-    method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`
+  try {
+    const res = await fetch(`https://mahsulot-1-jerl.onrender.com/check_S/${id}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`
+      }
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      alert("Xatolik yuz berdi: " + (error.message || JSON.stringify(error)));
+      return;
     }
-  });
-  getProducts();
+
+    getProducts();
+  } catch (err) {
+    alert("So‘rovda xatolik: " + err.message);
+  }
 }
 
 // Logout
