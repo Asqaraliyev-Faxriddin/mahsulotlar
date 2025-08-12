@@ -167,7 +167,7 @@ async function markAsSold(id) {
 
 // Logout
 document.getElementById("logout-btn").addEventListener("click", () => {
-  localStorage.removeItem("AccessToken");
+  localStorage.removeItem("AccessToken"); 
   localStorage.removeItem("RefreshToken");
   window.location.href = "login.html";
 });
