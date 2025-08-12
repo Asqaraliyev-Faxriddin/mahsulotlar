@@ -42,7 +42,7 @@
       const password = document.getElementById('password').value.trim();
   
       try {
-        const res = await fetch('http://13.60.234.109:3000/auth/login', {
+        const res = await fetch('https://mahsulot-1-jerl.onrender.com/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone, password })
