@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tizimga Kirish</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 min-h-screen flex items-center justify-center p-5">
+
+  <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-8">
+    <h1 class="text-3xl font-bold mb-6 text-center text-indigo-700">Tizimga Kirish</h1>
+    <form id="loginForm" class="space-y-5">
+      <input type="tel" id="phone" placeholder="+998901234567" pattern="^\+998\d{9}$" required
+             class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <input type="password" id="password" placeholder="Parol" required
+             class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-md transition">
+        Kirish
+      </button>
+      <p id="loginMessage" class="text-red-600 text-center mt-2"></p>
+      <p class="text-center text-sm text-gray-600">
+        Parolingizni unutdingiz? 
+        <a href="reset-password.html" class="text-indigo-600 font-semibold hover:underline">Tiklash</a>
+      </p>
+      <p class="text-center text-sm text-gray-600 mt-4">
+        Ro‘yxatdan o‘tmaganmisiz? 
+        <a href="index.html" class="text-indigo-600 font-semibold hover:underline">Ro‘yxatdan o'tish</a>
+      </p>
+    </form>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginMessage = document.getElementById('loginMessage');
+  
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      loginMessage.textContent = '';
+  
+      const phone = document.getElementById('phone').value.trim();
+      const password = document.getElementById('password').value.trim();
+  
+      try {
+        const res = await fetch('http://13.60.234.109:3000/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, password })
+        });
+  
+        const data = await res.json(); // Bir marta o‘qiymiz
+  
+        if (res.status === 200 || res.status === 201) {
+          // Tokenni saqlash
+          localStorage.setItem('AccessToken', data?.AccessToken || data?.Tokens?.AccessToken || '');
+          localStorage.setItem('RefreshToken', data?.RefreshToken || data?.Tokens?.RefreshToken || '');
+  
+          console.log('Login success:', data);
+          window.location.href = 'register.html';
+        } else {
+          loginMessage.textContent = data.message || 'Noto‘g‘ri telefon yoki parol';
+          console.warn('Login error:', res.status, data);
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        loginMessage.textContent = 'Server bilan bog‘lanishda xatolik';
+      }
+    });
+  </script>
+  
+</body>
+</html>

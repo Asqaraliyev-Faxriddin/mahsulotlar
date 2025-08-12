@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bosh sahifa - Mahsulotlar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-blue-600">Mahsulotlar</h1>
+    <button id="logout-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+      Chiqish
+    </button>
+  </nav>
+
+  <main class="max-w-6xl mx-auto p-6">
+    <!-- Mahsulot qo‘shish formasi -->
+    <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+      <h2 class="text-lg font-semibold mb-4">Yangi mahsulot qo‘shish</h2>
+      <form id="add-product-form" class="grid gap-4 md:grid-cols-2">
+        <input name="nom" placeholder="Mahsulot nomi" required class="border p-2 rounded" />
+        <input name="tavsif" placeholder="Tavsif (ixtiyoriy)" class="border p-2 rounded" />
+        <input name="kimga" placeholder="Kimga" required class="border p-2 rounded" />
+        <input name="narx" type="number" placeholder="Narx" required class="border p-2 rounded" />
+        <input name="miqdor" type="number" placeholder="Miqdor" required class="border p-2 rounded" />
+        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+          Qo‘shish
+        </button>
+      </form>
+    </div>
+
+    <!-- Mahsulotlar ro‘yxati -->
+    <div id="products-section">
+      <h2 class="text-2xl font-semibold mb-4">Sizning mahsulotlaringiz</h2>
+      <div id="products-list" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+
+    <!-- Yuklanmoqda -->
+    <div id="loading" class="hidden text-center text-gray-500 mt-10">Yuklanmoqda...</div>
+  </main>
+
+<script>
+const accessToken = localStorage.getItem("AccessToken");
+if (!accessToken) {
+  window.location.href = "login.html";
+}
+
+const productsList = document.getElementById("products-list");
+const loadingEl = document.getElementById("loading");
+
+async function getProducts() {
+  loadingEl.classList.remove("hidden");
+  try {
+    const res = await fetch("http://13.60.43.31:3000/products", {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`
+      }
+    });
+    const products = await res.json();
+    renderProducts(products);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    loadingEl.classList.add("hidden");
+  }
+}
+
+function renderProducts(products) {
+  if (!products.length) {
+    productsList.innerHTML = `<p class="text-gray-600 col-span-full text-center">Hozircha mahsulot yo‘q</p>`;
+    return;
+  }
+  productsList.innerHTML = products.map(p => `
+    <div class="bg-white shadow rounded-lg p-4 flex flex-col justify-between">
+      <div>
+        <h3 class="text-lg font-bold text-blue-600 mb-2">${p.nom}</h3>
+        <p class="text-gray-700 mb-1">${p.tavsif || "Tavsif berilmagan"}</p>
+        <p class="text-gray-900 font-semibold">Narx: ${p.narx} so‘m</p>
+        <p class="text-gray-700">Miqdor: ${p.miqdor} dona</p>
+        <p class="${p.sotildimi ? 'text-green-600' : 'text-red-600'} font-bold mt-2">
+          ${p.sotildimi ? 'Sotib olingan' : 'Sotib olinmagan'}
+        </p>
+      </div>
+      <div class="mt-4 flex gap-2">
+        <button onclick="markAsSold(${p.id})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Sotildi</button>
+        <button onclick="editProduct(${p.id}, '${p.nom}', '${p.tavsif || ""}', ${p.narx}, ${p.miqdor})" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Tahrirlash</button>
+        <button onclick="deleteProduct(${p.id})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">O‘chirish</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+// Qo‘shish
+document.getElementById("add-product-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const formData = Object.fromEntries(new FormData(e.target).entries());
+  formData.narx = parseFloat(formData.narx);
+  formData.miqdor = parseInt(formData.miqdor);
+
+  await fetch("http://13.60.43.31:3000/products", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`
+    },
+    body: JSON.stringify(formData)
+  });
+  e.target.reset();
+  getProducts();
+});
+
+// O‘chirish
+async function deleteProduct(id) {
+  if (!confirm("Haqiqatan ham o‘chirmoqchimisiz?")) return;
+  await fetch(`http://13.60.43.31:3000/products/${id}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${accessToken}` }
+  });
+  getProducts();
+}
+
+// Tahrirlash
+async function editProduct(id, nom, tavsif, narx, miqdor) {
+  const newNom = prompt("Nomini kiriting", nom);
+  const newTavsif = prompt("Tavsifini kiriting", tavsif);
+  const newNarx = parseFloat(prompt("Narxini kiriting", narx));
+  const newMiqdor = parseInt(prompt("Miqdorini kiriting", miqdor));
+
+  await fetch(`http://13.60.43.31:3000/products/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ nom: newNom, tavsif: newTavsif, narx: newNarx, miqdor: newMiqdor })
+  });
+  getProducts();
+}
+
+// Sotildi belgilash
+async function markAsSold(id) {
+  await fetch(`http://13.60.43.31:3000/products/check_S/${id}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`
+    }
+  });
+  getProducts();
+}
+
+// Logout
+document.getElementById("logout-btn").addEventListener("click", () => {
+  localStorage.removeItem("AccessToken");
+  localStorage.removeItem("RefreshToken");
+  window.location.href = "login.html";
+});
+
+getProducts();
+</script>
+
+</body>
+</html>

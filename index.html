@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ro'yxatdan O'tish</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 min-h-screen flex items-center justify-center p-5">
+
+  <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-8">
+    <h1 class="text-3xl font-bold mb-6 text-center text-indigo-700">Ro'yxatdan O'tish</h1>
+
+    <!-- Step 1: Ism, Telefon, Parol -->
+    <form id="form-step1" class="space-y-5">
+      <input type="text" id="fullName" placeholder="Ism Familiya" required
+             class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <input type="tel" id="phone" placeholder="+998901234567" pattern="^\+998\d{9}$" required
+             class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <input type="password" id="password" placeholder="Parol (kamida 8 ta belgidan)" minlength="8" required
+             class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-md transition">
+        Keyingi
+      </button>
+      <p class="text-center text-sm text-gray-600">Ro‘yxatdan o‘tganmisiz? <a href="login.html" class="text-indigo-600 font-semibold hover:underline">Kirish</a></p>
+      <p id="step1-message" class="text-red-600 text-center mt-2"></p>
+    </form>
+
+    <!-- Step 2: Code kiriting -->
+    <form id="form-step2" class="space-y-5 hidden">
+      <p class="text-center text-gray-700">Telefoningizga <span id="phone-display" class="font-semibold"></span> code yuborildi.</p>
+      <input type="text" id="code" placeholder="Code (OTP)" required
+             class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-md transition">
+        Tasdiqlash
+      </button>
+      <p id="step2-message" class="text-red-600 text-center mt-2"></p>
+      <button type="button" id="resend-code" class="text-indigo-600 underline text-sm mx-auto block">Code qayta yuborish</button>
+    </form>
+  </div>
+
+<script>
+  const formStep1 = document.getElementById('form-step1');
+  const formStep2 = document.getElementById('form-step2');
+  const step1Message = document.getElementById('step1-message');
+  const step2Message = document.getElementById('step2-message');
+  const phoneDisplay = document.getElementById('phone-display');
+  const resendBtn = document.getElementById('resend-code');
+
+  let fullName = '';
+  let phone = '';
+  let password = '';
+
+  formStep1.addEventListener('submit', async e => {
+    e.preventDefault();
+    step1Message.textContent = '';
+    step2Message.textContent = '';
+
+    fullName = document.getElementById('fullName').value.trim();
+    phone = document.getElementById('phone').value.trim();
+    password = document.getElementById('password').value;
+
+    if(!fullName){
+      step1Message.textContent = 'Ism familiyani kiriting';
+      return;
+    }
+    if(!phone.match(/^\+998\d{9}$/)){
+      step1Message.textContent = 'Telefon raqamni +998XXXXXXXXX formatida kiriting';
+      return;
+    }
+    if(password.length < 8){
+      step1Message.textContent = 'Parol kamida 8 belgidan iborat bo‘lishi kerak';
+      return;
+    }
+
+    try {
+      // Telefon oldin ro'yxatdan o'tganmi, backendga yuborish (verification/send)
+      const sendOtpRes = await fetch('http://13.60.43.31:3000/verification/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: "register", phone})
+      });
+
+      if(sendOtpRes.status !== 201){
+        const err = await sendOtpRes.json();
+        step1Message.textContent = err.message || 'Telefon raqam tekshirilganda xatolik.';
+        return;
+      }
+
+      // Agar muvaffaqiyatli bo'lsa, step2 formni ko'rsatamiz
+      phoneDisplay.textContent = phone;
+      formStep1.classList.add('hidden');
+      formStep2.classList.remove('hidden');
+    } catch (err) {
+      step1Message.textContent = 'Server bilan bog‘lanishda xatolik';
+    }
+  });
+
+  resendBtn.addEventListener('click', async () => {
+    step2Message.textContent = '';
+    try {
+      const resendRes = await fetch('http://13.60.43.31:3000/verification/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: "register", phone})
+      });
+      if(resendRes.status === 201){
+        step2Message.textContent = 'Code qayta yuborildi';
+        step2Message.classList.remove('text-red-600');
+        step2Message.classList.add('text-green-600');
+      } else {
+        const err = await resendRes.json();
+        step2Message.textContent = err.message || 'Code yuborishda xatolik.';
+        step2Message.classList.add('text-red-600');
+      }
+    } catch {
+      step2Message.textContent = 'Server bilan bog‘lanishda xatolik';
+      step2Message.classList.add('text-red-600');
+    }
+  });
+
+  formStep2.addEventListener('submit', async e => {
+    e.preventDefault();
+    step2Message.textContent = '';
+
+    const code = document.getElementById('code').value.trim();
+    if(!code){
+      step2Message.textContent = 'Code ni kiriting';
+      return;
+    }
+
+    try {
+      // OTP tekshirish
+      const verifyRes = await fetch('http://13.60.43.31:3000/verification/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: "register", phone : phone.toString(), otp: code.toString()})
+      });
+
+      if(verifyRes.status !== 201){
+        const err = await verifyRes.json();
+        step2Message.textContent = err.message || 'Code noto‘g‘ri yoki xatolik yuz berdi';
+        return;
+      }
+
+      // Ro'yxatdan o'tish
+      const registerRes = await fetch('http://13.60.43.31:3000/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({fullName, phone, password, otp: code})
+      });
+      if(registerRes.status === 201){
+  const data = await registerRes.json();
+
+  // Misol uchun, data quyidagi shaklda keladi deb faraz qilamiz:
+  // {
+  //   accessToken: "eyJhbGc...",
+  //   refreshToken: "djslajd..."
+  // }
+
+  // Tokenlarni localStorage ga yoki istalgan joyga saqlaymiz
+  localStorage.setItem('accessToken', data.accessToken);
+  localStorage.setItem('refreshToken', data.refreshToken);
+
+  alert('Ro‘yxatdan o‘tish muvaffaqiyatli! Endi tizimga kirishingiz mumkin.');
+
+  window.location.href = 'register.html';
+
+} else {
+  const err = await registerRes.json();
+  step2Message.textContent = err.message || 'Ro‘yxatdan o‘tishda xatolik';
+}
+    } catch {
+      step2Message.textContent = 'Server bilan bog‘lanishda xatolik';
+    }
+  });
+</script>
+
+</body>
+</html>
+
+
+
+
